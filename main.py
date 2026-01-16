@@ -196,3 +196,11 @@ def admin_list_devices(company_key: str, x_admin_token: str | None = Header(defa
     ]
     conn.close()
     return {"company_key": ck, "devices": rows}
+    from fastapi.responses import HTMLResponse
+from pathlib import Path
+
+@app.get("/admin-panel", response_class=HTMLResponse)
+def admin_panel():
+    p = Path(__file__).with_name("admin.html")
+    return HTMLResponse(p.read_text(encoding="utf-8"))
+
