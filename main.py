@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import os, sqlite3
 from datetime import datetime
 
-APP = FastAPI(title="Ponto do Açaí - Licenças")
+APP = FastAPI()
 DB_PATH = os.environ.get("LICENSE_DB", "license.db")
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "troque-essa-chave")
 
