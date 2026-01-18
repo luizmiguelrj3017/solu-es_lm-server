@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import time
-from typing import Optional, List
+from typing import Optional
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
@@ -23,22 +23,43 @@ DB_PATH = os.getenv("LICENSE_DB", "license.db")
 # DB Helpers
 # =========================================================
 def get_db():
-    return sqlite3.connect(DB_PATH)
+    # check_same_thread=False ajuda em alguns ambientes com múltiplas threads
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
+
+def now_ts():
+    return int(time.time())
 
 def init_db():
     with get_db() as con:
         cur = con.cursor()
+
+        # Cria tabela (nova versão já com colunas extras)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS devices (
-                company_key TEXT NOT NULL,
-                device_id   TEXT NOT NULL,
-                hostname    TEXT,
-                status      TEXT NOT NULL,
-                created_at  INTEGER,
-                updated_at  INTEGER,
+                company_key     TEXT NOT NULL,
+                device_id       TEXT NOT NULL,
+                hostname        TEXT,
+                pc_name         TEXT,
+                requester_name  TEXT,
+                establishment   TEXT,
+                status          TEXT NOT NULL,
+                created_at      INTEGER,
+                updated_at      INTEGER,
                 PRIMARY KEY (company_key, device_id)
             )
         """)
+
+        # Migração para quem já tinha o banco antigo
+        cur.execute("PRAGMA table_info(devices)")
+        cols = {row[1] for row in cur.fetchall()}
+
+        if "pc_name" not in cols:
+            cur.execute("ALTER TABLE devices ADD COLUMN pc_name TEXT")
+        if "requester_name" not in cols:
+            cur.execute("ALTER TABLE devices ADD COLUMN requester_name TEXT")
+        if "establishment" not in cols:
+            cur.execute("ALTER TABLE devices ADD COLUMN establishment TEXT")
+
         con.commit()
 
 init_db()
@@ -50,6 +71,12 @@ class CheckPayload(BaseModel):
     company_key: str
     device_id: str
     hostname: Optional[str] = None
+
+    # Novos campos (para identificar o solicitante e o PC)
+    pc_name: Optional[str] = None
+    requester_name: Optional[str] = None
+    establishment: Optional[str] = None
+
     ts: Optional[int] = None
 
 class AdminDeviceAction(BaseModel):
@@ -63,9 +90,6 @@ def require_admin(x_admin_token: Optional[str]):
     if not ADMIN_TOKEN or x_admin_token != ADMIN_TOKEN:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-def now_ts():
-    return int(time.time())
-
 # =========================================================
 # Public
 # =========================================================
@@ -73,15 +97,22 @@ def now_ts():
 def health():
     return {"status": "ok"}
 
+# Render geralmente usa /healthz no health check — deixei os dois.
+@APP.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
 @APP.post("/api/check")
 def api_check(payload: CheckPayload):
     """
     POS chama este endpoint ao iniciar.
-    Se AUTHORIZED -> authorized: true
-    Se PENDING/REVOKED -> authorized: false
+    - Se AUTHORIZED -> authorized: true
+    - Se PENDING/REVOKED -> authorized: false
+    - Primeira vez: cria registro PENDING (salvando Nome/Estabelecimento/PC)
     """
     with get_db() as con:
         cur = con.cursor()
+
         cur.execute(
             "SELECT status FROM devices WHERE company_key=? AND device_id=?",
             (payload.company_key, payload.device_id)
@@ -93,13 +124,16 @@ def api_check(payload: CheckPayload):
             cur.execute(
                 """
                 INSERT OR REPLACE INTO devices
-                (company_key, device_id, hostname, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (company_key, device_id, hostname, pc_name, requester_name, establishment, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     payload.company_key,
                     payload.device_id,
                     payload.hostname,
+                    payload.pc_name,
+                    payload.requester_name,
+                    payload.establishment,
                     "PENDING",
                     now_ts(),
                     now_ts(),
@@ -113,6 +147,30 @@ def api_check(payload: CheckPayload):
             }
 
         status = row[0]
+
+        # Atualiza dados "faltantes" (caso o primeiro check não tenha vindo completo)
+        cur.execute(
+            """
+            UPDATE devices
+            SET hostname = COALESCE(hostname, ?),
+                pc_name = COALESCE(pc_name, ?),
+                requester_name = COALESCE(requester_name, ?),
+                establishment = COALESCE(establishment, ?),
+                updated_at = ?
+            WHERE company_key=? AND device_id=?
+            """,
+            (
+                payload.hostname,
+                payload.pc_name,
+                payload.requester_name,
+                payload.establishment,
+                now_ts(),
+                payload.company_key,
+                payload.device_id,
+            )
+        )
+        con.commit()
+
         if status == "AUTHORIZED":
             return {"authorized": True}
 
@@ -135,7 +193,8 @@ def admin_list_devices(
         cur = con.cursor()
         cur.execute(
             """
-            SELECT company_key, device_id, hostname, status, created_at, updated_at
+            SELECT company_key, device_id, hostname, pc_name, requester_name, establishment,
+                   status, created_at, updated_at
             FROM devices
             WHERE company_key=?
             ORDER BY updated_at DESC
@@ -148,9 +207,12 @@ def admin_list_devices(
                 "company_key": r[0],
                 "device_id": r[1],
                 "hostname": r[2],
-                "status": r[3],
-                "created_at": r[4],
-                "updated_at": r[5],
+                "pc_name": r[3],
+                "requester_name": r[4],
+                "establishment": r[5],
+                "status": r[6],
+                "created_at": r[7],
+                "updated_at": r[8],
             }
             for r in rows
         ]
