@@ -26,14 +26,14 @@ def get_db():
     # check_same_thread=False ajuda em alguns ambientes com múltiplas threads
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
-def now_ts():
+def now_ts() -> int:
     return int(time.time())
 
 def init_db():
     with get_db() as con:
         cur = con.cursor()
 
-        # Cria tabela (nova versão já com colunas extras)
+        # Tabela (versão nova com campos extras)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS devices (
                 company_key     TEXT NOT NULL,
@@ -49,7 +49,7 @@ def init_db():
             )
         """)
 
-        # Migração para quem já tinha o banco antigo
+        # Migração para DB antigo (adiciona colunas se faltarem)
         cur.execute("PRAGMA table_info(devices)")
         cols = {row[1] for row in cur.fetchall()}
 
@@ -72,7 +72,7 @@ class CheckPayload(BaseModel):
     device_id: str
     hostname: Optional[str] = None
 
-    # Novos campos (para identificar o solicitante e o PC)
+    # Novos campos (para identificar solicitante e PC)
     pc_name: Optional[str] = None
     requester_name: Optional[str] = None
     establishment: Optional[str] = None
@@ -97,7 +97,7 @@ def require_admin(x_admin_token: Optional[str]):
 def health():
     return {"status": "ok"}
 
-# Render geralmente usa /healthz no health check — deixei os dois.
+# Render está com Health Check em /healthz
 @APP.get("/healthz")
 def healthz():
     return {"status": "ok"}
@@ -106,9 +106,9 @@ def healthz():
 def api_check(payload: CheckPayload):
     """
     POS chama este endpoint ao iniciar.
-    - Se AUTHORIZED -> authorized: true
-    - Se PENDING/REVOKED -> authorized: false
-    - Primeira vez: cria registro PENDING (salvando Nome/Estabelecimento/PC)
+    - AUTHORIZED -> authorized: true
+    - PENDING/REVOKED -> authorized: false
+    - Primeira vez: cria registro PENDING (salva Nome/Estabelecimento/PC)
     """
     with get_db() as con:
         cur = con.cursor()
@@ -148,14 +148,15 @@ def api_check(payload: CheckPayload):
 
         status = row[0]
 
-        # Atualiza dados "faltantes" (caso o primeiro check não tenha vindo completo)
+        # Atualiza dados do device SEM travar em strings vazias.
+        # Se no banco estiver "", tratamos como NULL (NULLIF) para permitir atualização posterior.
         cur.execute(
             """
             UPDATE devices
-            SET hostname = COALESCE(hostname, ?),
-                pc_name = COALESCE(pc_name, ?),
-                requester_name = COALESCE(requester_name, ?),
-                establishment = COALESCE(establishment, ?),
+            SET hostname = COALESCE(NULLIF(hostname, ''), ?),
+                pc_name = COALESCE(NULLIF(pc_name, ''), ?),
+                requester_name = COALESCE(NULLIF(requester_name, ''), ?),
+                establishment = COALESCE(NULLIF(establishment, ''), ?),
                 updated_at = ?
             WHERE company_key=? AND device_id=?
             """,
