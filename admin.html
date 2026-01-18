@@ -5,63 +5,158 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Admin Licenças - Ponto do Açaí</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 24px; }
+    :root {
+      --bg: #0b0f14;
+      --card: #121826;
+      --muted: #9aa4b2;
+      --text: #e5e7eb;
+      --border: rgba(255,255,255,.10);
+      --head: rgba(255,255,255,.06);
+      --ok: #16a34a;
+      --bad: #ef4444;
+      --blue: #3b82f6;
+      --warn: #f59e0b;
+    }
+
+    body { font-family: Arial, sans-serif; margin: 24px; background: var(--bg); color: var(--text); }
+    h2 { margin: 0 0 6px; }
+    p.muted { margin: 0 0 16px; color: var(--muted); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
     .row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
-    input, button { padding:10px; font-size:14px; }
-    table { border-collapse: collapse; width: 100%; margin-top:16px; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align:left; }
-    th { background:#f3f3f3; }
-    .badge { padding:4px 8px; border-radius: 10px; font-size:12px; display:inline-block; }
-    .pending { background:#fff3cd; }
-    .auth { background:#d1e7dd; }
-    .rev { background:#f8d7da; }
-    .muted { color:#666; }
-    .btn { cursor:pointer; }
-    .btn-ok { background:#198754; color:#fff; border:none; }
-    .btn-bad { background:#dc3545; color:#fff; border:none; }
-    .btn-blue { background:#0d6efd; color:#fff; border:none; }
+    label { color: var(--muted); font-size: 12px; }
+    input, button, select {
+      padding:10px;
+      font-size:14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      outline: none;
+    }
+    input::placeholder { color: rgba(229,231,235,.45); }
+    button { cursor:pointer; }
+    .btn-ok { background: rgba(22,163,74,.15); border: 1px solid rgba(22,163,74,.45); }
+    .btn-bad { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.45); }
+    .btn-blue { background: rgba(59,130,246,.14); border: 1px solid rgba(59,130,246,.45); }
+    .btn-ghost { background: transparent; }
+    .btn-ok:hover, .btn-bad:hover, .btn-blue:hover { filter: brightness(1.08); }
+
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; overflow: hidden; border-radius: 14px; border: 1px solid var(--border); }
+    th, td { border-bottom: 1px solid var(--border); padding: 10px; text-align:left; vertical-align: top; }
+    th { background: var(--head); color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    tr:hover td { background: rgba(255,255,255,.03); }
+    code { font-size: 12px; color: #cbd5e1; }
+
+    .badge { padding:4px 10px; border-radius: 999px; font-size:12px; display:inline-block; border: 1px solid var(--border); }
+    .pending { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.45); color: #fde68a; }
+    .auth { background: rgba(22,163,74,.12); border-color: rgba(22,163,74,.45); color: #bbf7d0; }
+    .rev { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.45); color: #fecaca; }
+    .mutedText { color: var(--muted); }
+
     .small { font-size: 12px; }
-    .err { color:#b02a37; margin-top:10px; }
-    .ok { color:#146c43; margin-top:10px; }
+    .err { color: #fca5a5; margin-top:10px; }
+    .ok { color: #86efac; margin-top:10px; }
+    .right { margin-left: auto; }
+    .toolbar { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
+    .kpi { display:flex; gap:10px; align-items:center; color: var(--muted); font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display:inline-block; }
+    .dot-warn { background: var(--warn); }
+    .dot-ok { background: var(--ok); }
+    .dot-bad { background: var(--bad); }
+
+    .pill {
+      display:inline-flex; align-items:center; gap:8px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
-  <h2>Admin de Licenças</h2>
-  <p class="muted">Use para autorizar/revogar máquinas por empresa.</p>
+  <div class="card">
+    <h2>Admin de Licenças</h2>
+    <p class="muted">Autorize/revogue máquinas. Agora mostra PC, Nome e Estabelecimento.</p>
 
-  <div class="row">
-    <div>
-      <label>URL do servidor</label><br/>
-      <input id="baseUrl" style="width:340px" value="https://solu-es-lm-server.onrender.com" />
+    <div class="row">
+      <div>
+        <label>URL do servidor</label><br/>
+        <input id="baseUrl" style="width:360px" value="https://solu-es-lm-server.onrender.com" />
+      </div>
+      <div>
+        <label>Admin Token</label><br/>
+        <input id="token" style="width:240px" placeholder="ADMIN_TOKEN" />
+      </div>
+      <div>
+        <label>Company Key</label><br/>
+        <input id="company" style="width:220px" value="PONTO_DO_ACAI_001" />
+      </div>
+
+      <button class="btn-blue" onclick="loadDevices()">Carregar</button>
+
+      <div class="right toolbar">
+        <span class="pill">
+          <input id="onlyPending" type="checkbox" style="transform: translateY(1px)" onchange="renderTable()" />
+          <label for="onlyPending" style="color: var(--text); font-size: 12px;">Só pendentes</label>
+        </span>
+
+        <div>
+          <label>Buscar</label><br/>
+          <input id="search" style="width:260px" placeholder="pc, nome, estabelecimento, device id..." oninput="renderTable()" />
+        </div>
+      </div>
     </div>
-    <div>
-      <label>Admin Token</label><br/>
-      <input id="token" style="width:220px" placeholder="luizmiguel_rj1411" />
-    </div>
-    <div>
-      <label>Company Key</label><br/>
-      <input id="company" style="width:220px" value="PONTO_DO_ACAI_001" />
-    </div>
-    <button class="btn btn-blue" onclick="loadDevices()">Carregar</button>
+
+    <div id="msg"></div>
   </div>
 
-  <div id="msg"></div>
+  <div class="card">
+    <div class="toolbar">
+      <div class="kpi" id="kpi">
+        <span class="dot dot-warn"></span> Pendentes: <b id="kPending">0</b>
+        <span class="dot dot-ok"></span> Autorizados: <b id="kAuth">0</b>
+        <span class="dot dot-bad"></span> Revogados: <b id="kRev">0</b>
+        <span class="mutedText">Total:</span> <b id="kTotal">0</b>
+      </div>
+      <button class="btn-ghost right" onclick="loadDevices()">🔄 Atualizar</button>
+    </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Hostname</th>
-        <th>Device ID</th>
-        <th>Status</th>
-        <th>Ações</th>
-      </tr>
-    </thead>
-    <tbody id="tbody">
-      <tr><td colspan="4" class="muted">Clique em “Carregar”.</td></tr>
-    </tbody>
-  </table>
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>PC</th>
+          <th>Nome</th>
+          <th>Estabelecimento</th>
+          <th>Hostname</th>
+          <th>Device ID</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="7" class="mutedText">Clique em “Carregar”.</td></tr>
+      </tbody>
+    </table>
+  </div>
 
 <script>
+let CACHE = [];
+
+function norm(v) {
+  return (v ?? "").toString().trim();
+}
+
 function badge(status) {
   const s = (status || '').toUpperCase();
   if (s.includes('PEND')) return `<span class="badge pending">PENDING</span>`;
@@ -81,6 +176,7 @@ async function api(path, method="GET", body=null) {
   const token = document.getElementById("token").value.trim();
   const headers = { "X-Admin-Token": token };
   if (body) headers["Content-Type"] = "application/json";
+
   const resp = await fetch(base + path, { method, headers, body: body ? JSON.stringify(body) : null });
   const txt = await resp.text();
   let data;
@@ -89,39 +185,109 @@ async function api(path, method="GET", body=null) {
   return data;
 }
 
+function updateKPI(arr) {
+  let p=0, a=0, r=0;
+  for (const d of arr) {
+    const s = (d.status || "").toUpperCase();
+    if (s.includes("PEND")) p++;
+    else if (s.includes("AUTH")) a++;
+    else if (s.includes("REV")) r++;
+  }
+  document.getElementById("kPending").textContent = p;
+  document.getElementById("kAuth").textContent = a;
+  document.getElementById("kRev").textContent = r;
+  document.getElementById("kTotal").textContent = arr.length;
+}
+
+function copyText(txt) {
+  navigator.clipboard.writeText(txt).then(() => {
+    setMsg("Copiado ✅", "ok");
+    setTimeout(() => setMsg("", ""), 900);
+  }).catch(() => {
+    setMsg("Não consegui copiar automaticamente. Copie manualmente.", "err");
+  });
+}
+
+function matchesSearch(d, q) {
+  if (!q) return true;
+  const hay = [
+    d.pc_name, d.requester_name, d.establishment,
+    d.hostname, d.device_id, d.status
+  ].map(norm).join(" ").toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+
+function shouldShow(d) {
+  const onlyPending = document.getElementById("onlyPending").checked;
+  const q = norm(document.getElementById("search").value);
+  const s = (d.status || "").toUpperCase();
+  if (onlyPending && !s.includes("PEND")) return false;
+  if (!matchesSearch(d, q)) return false;
+  return true;
+}
+
+function renderTable() {
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+
+  const shown = CACHE.filter(shouldShow);
+
+  if (!shown.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="mutedText">Nenhum registro para exibir.</td></tr>`;
+    return;
+  }
+
+  for (const d of shown) {
+    const pc = norm(d.pc_name) || "-";
+    const name = norm(d.requester_name) || "-";
+    const est = norm(d.establishment) || "-";
+    const hostname = norm(d.hostname) || "-";
+    const deviceId = norm(d.device_id) || "-";
+    const status = norm(d.status) || "-";
+
+    tbody.insertAdjacentHTML("beforeend", `
+      <tr>
+        <td>${badge(String(status))}</td>
+        <td><b>${pc}</b></td>
+        <td>${name}</td>
+        <td>${est}</td>
+        <td class="small">${hostname}</td>
+        <td class="small"><code>${deviceId}</code><br/>
+          <button class="btn-ghost small" onclick="copyText('${deviceId.replace(/'/g, "\\'")}')">Copiar</button>
+        </td>
+        <td class="small">
+          <button class="btn-ok" onclick="authorize('${d.company_key}','${deviceId}')">Autorizar</button>
+          <button class="btn-bad" onclick="revoke('${d.company_key}','${deviceId}')">Revogar</button>
+        </td>
+      </tr>
+    `);
+  }
+}
+
 async function loadDevices() {
-  setMsg("Carregando...", "muted");
+  setMsg("Carregando...", "mutedText");
   const company = document.getElementById("company").value.trim();
+
   try {
     const data = await api(`/admin/devices?company_key=${encodeURIComponent(company)}`);
     const arr = Array.isArray(data) ? data : (data.devices || []);
-    const tbody = document.getElementById("tbody");
-    tbody.innerHTML = "";
-    if (!arr.length) {
-      tbody.innerHTML = `<tr><td colspan="4" class="muted">Nenhuma máquina encontrada.</td></tr>`;
-      setMsg("OK. Nenhuma máquina encontrada.", "ok");
-      return;
-    }
-    for (const d of arr) {
-      const hostname = d.hostname || d.host || d.computer || "-";
-      const deviceId = d.device_id || d.deviceId || d.id || "-";
-      const status = d.status ?? d.authorized ?? d.ok ?? "-";
-      tbody.insertAdjacentHTML("beforeend", `
-        <tr>
-          <td>${hostname}</td>
-          <td><code>${deviceId}</code></td>
-          <td>${badge(String(status))}</td>
-          <td class="small">
-            <button class="btn btn-ok" onclick="authorize('${company}','${deviceId}')">Autorizar</button>
-            <button class="btn btn-bad" onclick="revoke('${company}','${deviceId}')">Revogar</button>
-          </td>
-        </tr>
-      `);
-    }
-    setMsg("Lista carregada.", "ok");
+    CACHE = arr.map(d => ({
+      company_key: d.company_key || company,
+      device_id: d.device_id || d.deviceId || d.id || "-",
+      hostname: d.hostname || d.host || d.computer || "",
+      pc_name: d.pc_name || "",
+      requester_name: d.requester_name || "",
+      establishment: d.establishment || "",
+      status: d.status ?? d.authorized ?? d.ok ?? "-"
+    }));
+
+    updateKPI(CACHE);
+    renderTable();
+
+    setMsg("Lista carregada ✅", "ok");
   } catch (e) {
     setMsg("Erro: " + e.message, "err");
-    document.getElementById("tbody").innerHTML = `<tr><td colspan="4" class="err">Erro ao carregar.</td></tr>`;
+    document.getElementById("tbody").innerHTML = `<tr><td colspan="7" class="err">Erro ao carregar.</td></tr>`;
   }
 }
 
